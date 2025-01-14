@@ -176,8 +176,6 @@ class DataPipeline:
         except ProgrammingError:
             table_exists = False
         
-        print('table exists:', table_exists)
-
         if table_exists:
             # Exclude rows that already exist in patient_journey_schedule_window
             existing_data_query = "SELECT patient_id, patient_journey_id, activity_id, schedule_id FROM patient_journey_schedule_window"
