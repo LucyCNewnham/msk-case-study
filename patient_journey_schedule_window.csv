@@ -1,3 +1,0 @@
-patient_id,patient_journey_id,activity_id,activity_content_slug,schedule_id,schedule_slug,schedule_start_offset_days,schedule_end_offset_days,schedule_milestone_slug,milestone_date
-1,101,301,pain-survey,201,4d-2d-pre-op,4,2,pre-op,2023-05-10
-2,102,302,readiness-survey,202,3m-1d-post-op,90,1,post-op,2023-06-15
