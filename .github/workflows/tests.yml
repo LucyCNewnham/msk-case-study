@@ -1,31 +1,36 @@
-name: Run Tests on Pull Request
+name: Pull Request Tests
 
 on:
   pull_request:
     branches:
-      - main  # Replace with the default branch name if it's not 'main'
+      - main  # Adjust to your primary branch name
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Clone repository
       run: |
-        git clone $GITHUB_SERVER_URL/$GITHUB_REPOSITORY repo
+        mkdir repo
         cd repo
+        git init
+        git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+        git fetch origin $GITHUB_REF_NAME
+        git checkout FETCH_HEAD
 
-    - name: Set up Python
+    - name: Set up Python environment
       run: |
         sudo apt-get update
         sudo apt-get install -y python3 python3-pip python3-venv
         python3 -m venv venv
         source venv/bin/activate
-        pip install --upgrade pip
+        python --version
 
     - name: Install dependencies
       run: |
         source venv/bin/activate
+        pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Install test dependencies
