@@ -6,10 +6,7 @@ import os
 from application.patient_journey_pipeline import DataPipeline
 import schedule
 
-# Load environment variables
 load_dotenv()
-
-# Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 

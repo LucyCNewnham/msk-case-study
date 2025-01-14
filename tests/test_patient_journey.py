@@ -2,7 +2,6 @@ import pytest
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
-from sqlalchemy.exc import OperationalError
 from application.patient_journey_pipeline import ScheduleParser, DataPipeline
 
 @pytest.fixture
