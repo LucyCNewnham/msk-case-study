@@ -30,7 +30,7 @@ jobs:
     - name: Install test dependencies
       run: |
         source venv/bin/activate
-        pip install -r requirements-tests.txt
+        pip install -r requirements-test.txt
 
     - name: Run tests
       run: |
