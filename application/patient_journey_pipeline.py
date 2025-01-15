@@ -12,6 +12,20 @@ class ScheduleParser:
     Class to parse schedule slugs and extract schedule-related details.
     """
 
+    def __init__(self, failure_log=None):
+        # pass failure log, or create a new one if one doesnt already exist
+        self.failure_log = failure_log if failure_log is not None else []
+
+
+    def log_failure(self, slug):
+        failure_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "slug": slug,
+            "error_message": f"Unable to parse schedule_slug: {slug}"
+        }
+        self.failure_log.append(failure_entry)
+        logging.error(failure_entry["error_message"])
+
     @staticmethod
     def format_milestone(milestone_slug, invitation_date, registration_date, discharge_date, consent_date, operation_date):
         """
@@ -43,9 +57,8 @@ class ScheduleParser:
 
         return milestone, milestone_date[0] # only taking the first of the milestone dates. This would need to be reviewed for methodology
 
-        
-    @staticmethod
-    def parse_schedule_slug(schedule_slug):
+
+    def parse_schedule_slug(self, schedule_slug):
         """
         Parse the schedule slug and extract start offset, end offset, and milestone slug.
         Handles various slug formats. Full disclosure, some edge cases may not be taken into consideration
@@ -114,15 +127,16 @@ class ScheduleParser:
 
             return start_offset_days, 0, milestone_slug
 
-        logging.warning(f"Unable to parse schedule_slug: {schedule_slug}")
+        self.log_failure(schedule_slug)
         return None, None, None
+
 
     @staticmethod
     def convert_to_days(value, unit):
         if unit == 'd':
             return value
         elif unit == 'm':
-            return value * 30  # Approximation for months
+            return value * 30  # approx for month -- will need a different method for this realistically
         elif unit == 'w':
             return value * 7
         elif unit == 'y':
@@ -138,6 +152,9 @@ class DataPipeline:
 
     def __init__(self, db_engine):
         self.db_engine = db_engine
+        self.failure_log = []
+        self.schedule_parser = ScheduleParser(failure_log=self.failure_log)
+
 
     def fetch_data(self):
         """
@@ -199,7 +216,7 @@ class DataPipeline:
         # Extract schedule details
         transformed_data = []
         for _, row in merged_data.iterrows():
-            start_offset, end_offset, milestone_slug = ScheduleParser.parse_schedule_slug(row['slug'])
+            start_offset, end_offset, milestone_slug = self.schedule_parser.parse_schedule_slug(row['slug'])
             milestone, milestone_date = ScheduleParser.format_milestone(milestone_slug, row['invitation_date'], row['registration_date'], row['discharge_date'], row['consent_date'], row['operation_date'])
             transformed_data.append({
                 'patient_id': row['patient_id'],
@@ -222,6 +239,31 @@ class DataPipeline:
         Load the transformed data into the target database table.
         """
         logging.info("Loading data into patient_journey_schedule_window...")
-        transformed_data.to_sql('patient_journey_schedule_window', self.db_engine, if_exists='append', index=False)
-        logging.info("Data loaded successfully.")
+        try:
+            transformed_data.to_sql('patient_journey_schedule_window', self.db_engine, if_exists='append', index=False)
+            logging.info("Data loaded successfully.")
+        except Exception as e:
+            logging.error(f"Error loading transformed data: {e}")
 
+        # log failures to the database
+        if self.failure_log:
+            logging.info("Persisting failure logs to database...")
+            failure_df = pd.DataFrame(self.failure_log)
+            try:
+                failure_df.to_sql('pipeline_failures', self.db_engine, if_exists='append', index=False)
+                logging.info("Failure logs saved to pipeline_failures table.")
+            except Exception as e:
+                logging.error(f"Error saving failure logs to database: {e}")
+
+
+    def log_failure(self, stage, message):
+        failure_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "stage": stage,
+            "error_message": message
+        }
+        self.failure_log.append(failure_entry)
+        logging.error(f"Failure in {stage}: {message}")
+        
+    def get_failures(self):
+        return self.failure_log
