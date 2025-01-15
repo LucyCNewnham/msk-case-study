@@ -37,7 +37,7 @@ def sample_data():
 
 @pytest.fixture
 def db_engine():
-    # SQLite in-memory database for testing
+    # database for testing
     return create_engine("sqlite:///:memory:")
 
 def test_parse_schedule_slug_valid():
